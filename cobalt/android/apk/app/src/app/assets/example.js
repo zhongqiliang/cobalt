@@ -1,0 +1,2 @@
+AndroidExample.testJavaScriptMethod();
+AndroidExample.printIsAmatiDevice();
