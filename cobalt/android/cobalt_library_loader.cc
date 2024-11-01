@@ -1,4 +1,4 @@
-// Copyright 2017 The Cobalt Authors. All Rights Reserved.
+// Copyright 2024 The Cobalt Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "starboard/common/log.h"
-#include "starboard/export.h"
+#include "base/android/jni_android.h"
+#include "cobalt/cobalt_main_delegate.h"
+#include "content/public/app/content_jni_onload.h"
+#include "content/public/app/content_main.h"
 
-// TODO(b/375459298); Investigate whether we should enable main() on Android TV
-#if 0
-extern "C" SB_EXPORT_PLATFORM int main(int argc, char** argv) {
-  // main() is never called on Android. However, the cobalt_bin
-  // target requires it to be there.
-  SB_NOTREACHED();
-  return 0;
+// This is called by the VM when the shared library is first loaded.
+JNI_EXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+  base::android::InitVM(vm);
+  if (!content::android::OnJNIOnLoadInit()) {
+    return -1;
+  }
+  content::SetContentMainDelegate(new cobalt::CobaltMainDelegate());
+  return JNI_VERSION_1_4;
 }
-#endif  // 0
