@@ -36,8 +36,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 import dev.cobalt.app.CobaltApplication;
+import dev.cobalt.coat.javabridge.AmatiDeviceInspector;
 import dev.cobalt.coat.javabridge.CobaltJavaScriptAndroidObject;
-import dev.cobalt.coat.javabridge.CobaltJavaScriptAndroidObjectExample;
 import dev.cobalt.coat.javabridge.CobaltJavaScriptInterface;
 import dev.cobalt.media.MediaCodecCapabilitiesLogger;
 import dev.cobalt.media.VideoSurfaceView;
@@ -375,7 +375,7 @@ public abstract class CobaltActivity extends Activity {
     // --- Initialize the Java Bridge ---
 
     // 1. Gather all Java objects that need to be exposed to JavaScript.
-    javaScriptAndroidObjectList.add(new CobaltJavaScriptAndroidObjectExample(this));
+    javaScriptAndroidObjectList.add(new AmatiDeviceInspector(this));
 
     // 2. Use JavascriptInjector to inject Java objects into the WebView.
     //    This makes the annotated methods in these objects accessible from JavaScript.

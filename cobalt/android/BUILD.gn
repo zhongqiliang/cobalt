@@ -69,8 +69,8 @@ android_library("cobalt_apk_java") {
     "apk/app/src/main/java/dev/cobalt/coat/CaptionSettings.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltActivity.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltHttpHelper.java",
+    "apk/app/src/main/java/dev/cobalt/coat/javabridge/AmatiDeviceInspector.java",
     "apk/app/src/main/java/dev/cobalt/coat/javabridge/CobaltJavaScriptAndroidObject.java",
-    "apk/app/src/main/java/dev/cobalt/coat/javabridge/CobaltJavaScriptAndroidObjectExample.java",
     "apk/app/src/main/java/dev/cobalt/coat/javabridge/CobaltJavaScriptInterface.java",
 
     # "apk/app/src/main/java/dev/cobalt/coat/CobaltMediaSession.java",
@@ -122,7 +122,7 @@ android_library("cobalt_apk_java") {
 android_assets("cobalt_apk_assets") {
   testonly = true
   sources = [
-    "apk/app/src/app/assets/example.js",
+    "apk/app/src/app/assets/amati_device_inspector.js",
     "apk/app/src/app/assets/not_empty.txt",
     "apk/app/src/app/assets/test/not_empty.txt",
     "apk/app/src/app/assets/web/cobalt_blue_splash_screen.css",

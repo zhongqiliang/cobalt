@@ -8,27 +8,22 @@ import android.util.Log;
 /**
  * A simple example of implement CobaltJavaScriptAndroidObject.
  */
-public class CobaltJavaScriptAndroidObjectExample implements CobaltJavaScriptAndroidObject {
+public class AmatiDeviceInspector implements CobaltJavaScriptAndroidObject {
 
     private final Context context;
 
-    public CobaltJavaScriptAndroidObjectExample(Context context) {
+    public AmatiDeviceInspector(Context context) {
         this.context = context;
     }
 
     @Override
     public String getJavaScriptInterfaceName() {
-        return "AndroidExample";
+        return "Android_AmatiDeviceInspector";
     }
 
     @Override
     public String getJavaScriptAssetName() {
-        return "example.js";
-    }
-
-    @CobaltJavaScriptInterface
-    public void testJavaScriptMethod() {
-        Log.i(TAG, "Hello world");
+        return "amati_device_inspector.js";
     }
 
     @CobaltJavaScriptInterface
