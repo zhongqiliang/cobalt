@@ -63,6 +63,11 @@ public class StarboardBridge {
     StarboardBridge getStarboardBridge();
   }
 
+  static {
+    System.loadLibrary("starboard.cr");
+  }
+
+
   private CobaltSystemConfigChangeReceiver sysConfigChangeReceiver;
   private CobaltTextToSpeechHelper ttsHelper;
   // TODO(cobalt): Re-enable these classes or remove if unnecessary.
@@ -115,7 +120,6 @@ public class StarboardBridge {
     // Make sure the JNI stack is properly initialized first as there is
     // race condition as soon as any of the following objects creates a new thread.
     // nativeInitialize();
-
     this.appContext = appContext;
     this.activityHolder = activityHolder;
     this.serviceHolder = serviceHolder;

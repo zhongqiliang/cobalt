@@ -741,6 +741,10 @@ public class LibraryLoader {
         setEnvForNative();
         preloadAlreadyLocked(appInfo.packageName, inZygote);
         for (String library : NativeLibraries.LIBRARIES) {
+            if (library.equals("starboard.cr")) {
+                continue;
+            }
+
             System.loadLibrary(library);
         }
     }
