@@ -38,6 +38,11 @@ import android.view.InputDevice;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.CaptioningManager;
 import androidx.annotation.Nullable;
+import dev.cobalt.coat.javabridge.AmatiDeviceInspector;
+import dev.cobalt.coat.javabridge.CobaltJavaScriptAndroidObject;
+import dev.cobalt.coat.javabridge.CobaltJavaScriptInterface;
+import dev.cobalt.media.AudioOutputManager;
+import dev.cobalt.util.AssetLoader;
 import dev.cobalt.util.DisplayUtil;
 import dev.cobalt.util.Holder;
 import dev.cobalt.util.Log;
@@ -46,12 +51,15 @@ import java.lang.reflect.Method;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
-// import dev.cobalt.media.AudioOutputManager;
+import org.chromium.content_public.browser.JavascriptInjector;
+import org.chromium.content_public.browser.WebContents;
 
 /** Implementation of the required JNI methods called by the Starboard C++ code. */
 public class StarboardBridge {
@@ -66,7 +74,7 @@ public class StarboardBridge {
   private CobaltSystemConfigChangeReceiver sysConfigChangeReceiver;
   private CobaltTextToSpeechHelper ttsHelper;
   // TODO(cobalt): Re-enable these classes or remove if unnecessary.
-  // private AudioOutputManager audioOutputManager;
+  private AudioOutputManager audioOutputManager;
   // private CobaltMediaSession cobaltMediaSession;
   // private AudioPermissionRequester audioPermissionRequester;
   private NetworkStatus networkStatus;
@@ -103,6 +111,10 @@ public class StarboardBridge {
   private static final TimeZone DEFAULT_TIME_ZONE = TimeZone.getTimeZone("America/Los_Angeles");
   private final long timeNanosecondsPerMicrosecond = 1000;
 
+  // Maintain the list of JavaScript-exposed objects as a member variable
+  // to prevent them from being garbage collected prematurely.
+  private List<CobaltJavaScriptAndroidObject> javaScriptAndroidObjectList = new ArrayList<>();
+
   public StarboardBridge(
       Context appContext,
       Holder<Activity> activityHolder,
@@ -111,10 +123,11 @@ public class StarboardBridge {
       String[] args,
       String startDeepLink) {
 
-    // TODO(cobalt): re-enable native initialization steps or remove.
+    Log.i(TAG, "StarboardBridge init.");
+
     // Make sure the JNI stack is properly initialized first as there is
     // race condition as soon as any of the following objects creates a new thread.
-    // nativeInitialize();
+    nativeInitialize();
 
     this.appContext = appContext;
     this.activityHolder = activityHolder;
@@ -123,7 +136,7 @@ public class StarboardBridge {
     this.startDeepLink = startDeepLink;
     this.sysConfigChangeReceiver = new CobaltSystemConfigChangeReceiver(appContext, stopRequester);
     this.ttsHelper = new CobaltTextToSpeechHelper(appContext);
-    // this.audioOutputManager = new AudioOutputManager(appContext);
+    this.audioOutputManager = new AudioOutputManager(appContext);
     // this.cobaltMediaSession =
     //   new CobaltMediaSession(appContext, activityHolder, audioOutputManager, artworkDownloader);
     // this.audioPermissionRequester = new AudioPermissionRequester(appContext, activityHolder);
@@ -132,9 +145,17 @@ public class StarboardBridge {
     // this.advertisingId = new AdvertisingId(appContext);
     this.volumeStateReceiver = new VolumeStateReceiver(appContext);
     this.isAmatiDevice = appContext.getPackageManager().hasSystemFeature(AMATI_EXPERIENCE_FEATURE);
+
+    // Run native starboard thread, after all the objects it may access
+    // are set up.
+    // TODO(b/377042903): This may not be the correct for this - it should possible be
+    // started/stopped together with the activity.
+    startNativeStarboard();
   }
 
-  // private boolean nativeInitialize();
+  private native boolean nativeInitialize();
+
+  private native boolean startNativeStarboard();
 
   private long nativeCurrentMonotonicTime() {
     // TODO(b/375058047): re-enable monotonic time from native side.
@@ -142,11 +163,13 @@ public class StarboardBridge {
   }
 
   protected void onActivityStart(Activity activity) {
+    Log.e(TAG, "onActivityStart ran");
     activityHolder.set(activity);
     sysConfigChangeReceiver.setForeground(true);
   }
 
   protected void onActivityStop(Activity activity) {
+    Log.e(TAG, "onActivityStop ran");
     if (activityHolder.get() == activity) {
       activityHolder.set(null);
     }
@@ -273,6 +296,9 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   public Context getApplicationContext() {
+    if (appContext == null) {
+      throw new IllegalArgumentException("appContext cannot be null");
+    }
     return appContext;
   }
 
@@ -299,6 +325,9 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   protected String[] getArgs() {
+    if (args == null) {
+      throw new IllegalArgumentException("args cannot be null");
+    }
     return args;
   }
 
@@ -306,6 +335,9 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   protected String getStartDeepLink() {
+    if (startDeepLink == null) {
+      throw new IllegalArgumentException("startDeepLink cannot be null");
+    }
     return startDeepLink;
   }
 
@@ -400,6 +432,9 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   CobaltTextToSpeechHelper getTextToSpeechHelper() {
+    if (ttsHelper == null) {
+      throw new IllegalArgumentException("ttsHelper cannot be null for native code");
+    }
     return ttsHelper;
   }
 
@@ -448,6 +483,9 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   public ResourceOverlay getResourceOverlay() {
+    if (resourceOverlay == null) {
+      throw new IllegalArgumentException("resourceOverlay cannot be null for native code");
+    }
     return resourceOverlay;
   }
 
@@ -491,6 +529,9 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   boolean isNetworkConnected() {
+    if (networkStatus == null) {
+      throw new IllegalArgumentException("networkStatus cannot be null for native code");
+    }
     return networkStatus.isConnected();
   }
 
@@ -585,6 +626,9 @@ public class StarboardBridge {
       String album,
       MediaImage[] artwork,
       long duration) {
+
+    // TODO(b/377019873): re-enable
+    Log.e(TAG, "MediaSession is disabled");
     // cobaltMediaSession.updateMediaSession(
     //     playbackState, actions, positionMs, speed, title, artist, album, artwork, duration);
   }
@@ -592,6 +636,8 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   public void deactivateMediaSession() {
+    // TODO(b/377019873): re-enable
+    Log.e(TAG, "MediaSession is disabled");
     // cobaltMediaSession.deactivateMediaSession();
   }
 
@@ -627,6 +673,8 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   protected String getAdvertisingId() {
+    // TODO(b/377049113): re-enable
+    Log.e(TAG, "IFA is disabled");
     // return this.advertisingId.getId();
     return "";
   }
@@ -635,15 +683,20 @@ public class StarboardBridge {
   @SuppressWarnings("unused")
   @UsedByNative
   protected boolean getLimitAdTracking() {
+    // TODO(b/377049113): re-enable
+    Log.e(TAG, "IFA is disabled");
     // return this.advertisingId.isLimitAdTrackingEnabled();
     return false;
   }
 
-  // @SuppressWarnings("unused")
-  // @UsedByNative
-  // AudioOutputManager getAudioOutputManager() {
-  //   return audioOutputManager;
-  // }
+  @SuppressWarnings("unused")
+  @UsedByNative
+  AudioOutputManager getAudioOutputManager() {
+    if (audioOutputManager == null) {
+      throw new IllegalArgumentException("audioOutputManager cannot be null for native code");
+    }
+    return audioOutputManager;
+  }
 
   /** Returns Java layer implementation for AudioPermissionRequester */
   // @SuppressWarnings("unused")
@@ -691,6 +744,7 @@ public class StarboardBridge {
     return hdrCapabilities.getSupportedHdrTypes();
   }
 
+  // TODO(b/377019873): Re-enable MediaSession
   /** Return the CobaltMediaSession. */
   // public CobaltMediaSession cobaltMediaSession() {
   //   return cobaltMediaSession;
@@ -831,6 +885,47 @@ public class StarboardBridge {
     } catch (Exception e) {
       Log.w(TAG, "Unable to query Google Play Services package version", e);
       return 0;
+    }
+  }
+
+  /**
+   * Initializes the Java Bridge to allow communication between Java and JavaScript.
+   * This method injects Java objects into the WebView and loads corresponding JavaScript code.
+   */
+  @UsedByNative
+  protected void initializeJavaBridge() {
+    Log.i(TAG, "initializeJavaBridge");
+
+    Activity activity = activityHolder.get();
+    if (activity instanceof CobaltActivity) {
+      WebContents webContents = ((CobaltActivity) activity).getActiveWebContents();
+      if (webContents == null) {
+        Log.e(TAG, "webContents is null");
+        return;
+      }
+
+      // 1. Gather all Java objects that need to be exposed to JavaScript.
+      javaScriptAndroidObjectList.add(new AmatiDeviceInspector(activity));
+
+      // 2. Use JavascriptInjector to inject Java objects into the WebContents.
+      //    This makes the annotated methods in these objects accessible from JavaScript.
+      JavascriptInjector javascriptInjector = JavascriptInjector.fromWebContents(webContents, false);
+
+      javascriptInjector.setAllowInspection(true);
+      for (CobaltJavaScriptAndroidObject javascriptAndroidObject : javaScriptAndroidObjectList) {
+        Log.d(TAG, "Add JavaScriptAndroidObject:" + javascriptAndroidObject.getJavaScriptInterfaceName());
+        javascriptInjector.addPossiblyUnsafeInterface(javascriptAndroidObject, javascriptAndroidObject.getJavaScriptInterfaceName(), CobaltJavaScriptInterface.class);
+      }
+
+      // 3. Load and evaluate JavaScript code that interacts with the injected Java objects.
+      for (CobaltJavaScriptAndroidObject javaScriptAndroidObject : javaScriptAndroidObjectList) {
+        String jsFileName = javaScriptAndroidObject.getJavaScriptAssetName();
+        if (jsFileName != null) {
+          Log.d(TAG, "Evaluate JavaScript from Asset:" + jsFileName);
+          String jsCode = AssetLoader.loadJavaScriptFromAssets(activity, jsFileName);
+          webContents.evaluateJavaScript(jsCode, null);
+        }
+      }
     }
   }
 }
