@@ -1,0 +1,10 @@
+import("//third_party/blink/renderer/modules/modules.gni")
+
+blink_modules_sources("h5vcc_system") {
+  sources = [
+    "h5vcc_system.cc",
+    "h5vcc_system.h",
+  ]
+
+  # deps = [ "//cobalt/services/crash_annotator/public/mojom:mojom_blink" ]
+}

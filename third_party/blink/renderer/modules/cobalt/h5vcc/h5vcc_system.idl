@@ -1,0 +1,6 @@
+// We are defining a new interface called H5vccSystem.
+[
+  Exposed=Window
+] interface H5vccSystem {
+    readonly attribute DOMString advertisingId;
+};
